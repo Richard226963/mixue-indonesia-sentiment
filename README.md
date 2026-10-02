@@ -6,14 +6,14 @@ Social media analytics project: what do people actually say about Mixue Indonesi
 
 ```
 pip install -r requirements.txt
-python scrape.py      # instagram, needs your own login (non-API scraping per the brief)
-python news.py        # suara.com, no login needed
-python clean.py       # preprocessing + bot detection
-python sentiment.py   # indoBERT labeling + bert vs classical comparison
-python absa.py        # sentiment per aspect (harga, rasa, pelayanan, tempat)
-python topics.py      # lda topic modeling
-python analytics.py   # account + media analysis
-streamlit run dashboard.py   # dashboard + auto ppt generator (the brief's report automation)
+python scrape.py
+python news.py
+python clean.py  
+python sentiment.py  
+python absa.py      
+python topics.py 
+python analytics.py 
+streamlit run dashboard.py
 ```
 
 each script can be rerun; scrapers append what they have not saved yet and dedupe on load.
@@ -41,7 +41,7 @@ each script can be rerun; scrapers append what they have not saved yet and dedup
 | aspect-based sentiment analysis | absa.py |
 | topic modeling (lda) | topics.py |
 | account analysis (kol, engagement) + media analysis | analytics.py |
-| report automation: streamlit ui + ai-generated ppt | dashboard.py |
+| streamlit ui | dashboard.py |
 
 ## data files
 
