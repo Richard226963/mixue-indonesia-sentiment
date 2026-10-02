@@ -1,0 +1,12 @@
+pandas
+matplotlib
+wordcloud
+scikit-learn
+instaloader
+requests
+beautifulsoup4
+sastrawi
+transformers
+torch
+streamlit
+python-pptx
