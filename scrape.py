@@ -252,6 +252,12 @@ def main() -> None:
                     posts, comments = scrape_source(loader, name, make_posts, cap)
                     total_posts += posts
                     total_comments += comments
+                except instaloader.exceptions.AbortDownloadException:
+                    # feedback_required = instagram wants the account verified
+                    # before serving more data; nothing this run can do about it
+                    print(f"sumber '{name}' dilewati: instagram minta verifikasi akun "
+                          "(feedback_required). buka aplikasi instagram, cek pemberitahuan "
+                          "keamanan, lalu coba lagi beberapa jam ke depan", flush=True)
                 except instaloader.exceptions.InstaloaderException as error:
                     print(f"sumber '{name}' dilewati: {type(error).__name__}", flush=True)
             print(f"\nTOTAL: {total_posts} postingan, {total_comments} komentar tersimpan di data/")
