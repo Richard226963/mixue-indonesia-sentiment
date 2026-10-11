@@ -14,6 +14,10 @@ ACCOUNT_POSTS = 40
 HASHTAG_POSTS = 50
 MAX_COMMENTS_PER_POST = 100
 SLEEP = 3
+# resume switch: the two hashtag sources are already scraped and saved in data/
+# from the earlier run, so start directly at the official account (job order:
+# #mixueindonesia, #mixue, @mixueindonesia). set back to 0 for a fresh full run.
+ALREADY_DONE = 2
 OUTPUT_DIR = Path("data")
 
 PROFILE_IDS = {}  # username -> id, harvested from post owners while scraping
@@ -157,19 +161,29 @@ def pull_comments(post, comment_rows, comment_path):
 def account_posts(loader, account):
     # instagram rate limits the profile endpoint per session sometimes, so there
     # are three ways in: the normal lookup, search, or the id we saw on a hashtag
-    # post (hashtags are scraped first exactly for this)
+    # post. the two lookups are exactly the endpoints instagram has been
+    # throttling (instant 429 for two days now, while the graphql buckets that
+    # serve posts and comments stay healthy), so each lookup gets a single
+    # attempt and a flagged endpoint fails in seconds instead of chaining
+    # eleven-minute backoffs. the post/comment requests themselves keep the
+    # full retry patience.
     account = account.strip().lstrip("@").lower()
+    normal_attempts = loader.context.max_connection_attempts
     try:
-        return instaloader.Profile.from_username(loader.context, account).get_posts()
-    except instaloader.exceptions.ConnectionException as e:
-        print(f"  lookup langsung '{account}' dibatasi instagram, coba jalur lain "
-              f"({type(e).__name__})", flush=True)
-    try:
-        for p in instaloader.TopSearchResults(loader.context, account).get_profiles():
-            if p.username.lower() == account:
-                return p.get_posts()
-    except instaloader.exceptions.InstaloaderException:
-        pass
+        loader.context.max_connection_attempts = 1
+        try:
+            return instaloader.Profile.from_username(loader.context, account).get_posts()
+        except instaloader.exceptions.ConnectionException as e:
+            print(f"  lookup langsung '{account}' dibatasi instagram, coba jalur lain "
+                  f"({type(e).__name__})", flush=True)
+        try:
+            for p in instaloader.TopSearchResults(loader.context, account).get_profiles():
+                if p.username.lower() == account:
+                    return p.get_posts()
+        except instaloader.exceptions.InstaloaderException:
+            pass
+    finally:
+        loader.context.max_connection_attempts = normal_attempts
     if account in PROFILE_IDS:
         node = {"id": str(PROFILE_IDS[account]), "username": account}
         return instaloader.Profile(loader.context, node).get_posts()
@@ -229,6 +243,10 @@ def main() -> None:
             # falls back on when the profile endpoint is throttled
             jobs = [(h, lambda L, h=h: hashtag_posts(L, h), HASHTAG_POSTS) for h in HASHTAGS]
             jobs += [(a, lambda L, a=a: account_posts(L, a), ACCOUNT_POSTS) for a in ACCOUNTS]
+            if ALREADY_DONE:
+                skipped, jobs = jobs[:ALREADY_DONE], jobs[ALREADY_DONE:]
+                print(f"melewati {len(skipped)} sumber yang datanya sudah tersimpan: "
+                      f"{', '.join(name for name, _, _ in skipped)}", flush=True)
             for name, make_posts, cap in jobs:
                 try:
                     posts, comments = scrape_source(loader, name, make_posts, cap)
